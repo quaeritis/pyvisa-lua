@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    pyvisa-sim.common
+    pyvisa-lua.common
     ~~~~~~~~~~~~~~~~~
 
     This code is currently taken from PyVISA-py.
     Do not edit here.
 
-    :copyright: 2014 by PyVISA-sim Authors, see AUTHORS for more details.
+    :copyright: 2014 by PyVISA-lua Authors, see AUTHORS for more details.
     :license: MIT, see LICENSE for more details.
 """
 

@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-    pyvisa-sim.tcpip
-    ~~~~~~~~~~~~~~~~
+    pyvisa-lua.gpib
+    ~~~~~~~~~~~~~~~
 
-    TCPIP simulated session class.
+    GPIB simulated session.
 
-    :copyright: 2014 by PyVISA-sim Authors, see AUTHORS for more details.
+    :copyright: 2014 by PyVISA-lua Authors, see AUTHORS for more details.
     :license: MIT, see LICENSE for more details.
 """
 
 from __future__ import division, unicode_literals, print_function, absolute_import
+
+try:
+    import Queue as queue
+except ImportError:
+    import queue
 
 import time
 
@@ -18,10 +23,13 @@ from pyvisa import constants
 from . import sessions
 
 
-class BaseTCPIPSession(sessions.Session):
-    """Base class for TCPIP sessions.
+@sessions.Session.register(constants.InterfaceType.gpib, 'INSTR')
+class GPIBInstrumentSession(sessions.Session):
 
-    """
+    def after_parsing(self):
+        self.attrs[constants.VI_ATTR_INTF_NUM] = int(self.parsed.board)
+        self.attrs[constants.VI_ATTR_GPIB_PRIMARY_ADDR] = int(self.parsed.primary_address)
+        self.attrs[constants.VI_ATTR_GPIB_SECONDARY_ADDR] = int(self.parsed.secondary_address)
 
     def read(self, count):
         end_char, _ = self.get_attribute(constants.VI_ATTR_TERMCHAR)
@@ -58,23 +66,5 @@ class BaseTCPIPSession(sessions.Session):
             self.device.write(data[i:i+1])
 
         if send_end:
-            # EOM 4882
+            # EOM4882
             pass
-
-
-@sessions.Session.register(constants.InterfaceType.tcpip, 'INSTR')
-class TCPIPInstrumentSession(BaseTCPIPSession):
-
-    def after_parsing(self):
-        self.attrs[constants.VI_ATTR_INTF_NUM] = int(self.parsed.board)
-        self.attrs[constants.VI_ATTR_TCPIP_ADDR] = self.parsed.host_address
-        self.attrs[constants.VI_ATTR_TCPIP_DEVICE_NAME] = self.parsed.lan_device_name
-
-
-@sessions.Session.register(constants.InterfaceType.tcpip, 'SOCKET')
-class TCPIPSocketSession(BaseTCPIPSession):
-
-    def after_parsing(self):
-        self.attrs[constants.VI_ATTR_INTF_NUM] = int(self.parsed.board)
-        self.attrs[constants.VI_ATTR_TCPIP_ADDR] = self.parsed.host_address
-        self.attrs[constants.VI_ATTR_TCPIP_PORT] = int(self.parsed.port)

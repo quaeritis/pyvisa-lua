@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-    pyvisa-sim.parser
+    pyvisa-lua.parser
     ~~~~~~~~~~~~~~~~~
 
     Parser function
 
-    :copyright: 2014 by PyVISA-sim Authors, see AUTHORS for more details.
+    :copyright: 2014 by PyVISA-lua Authors, see AUTHORS for more details.
     :license: MIT, see LICENSE for more details.
 """
 
@@ -101,7 +101,7 @@ def _load(content_or_fp):
     if ver > SPEC_VERSION_TUPLE:
         raise ValueError('The spec version of the file is '
                          '%s but the parser is %s. '
-                         'Please update pyvisa-sim.' % (ver, SPEC_VERSION))
+                         'Please update pyvisa-lua.' % (ver, SPEC_VERSION))
 
     return data
 

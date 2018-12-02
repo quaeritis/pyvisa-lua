@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-    pyvisa-sim
+    pyvisa-lua
     ~~~~~~~~~~
 
     Simulated backend for PyVISA.
 
-    :copyright: 2014 by PyVISA-sim Authors, see AUTHORS for more details.
+    :copyright: 2014 by PyVISA-lua Authors, see AUTHORS for more details.
     :license: MIT, see LICENSE for more details.
 """
 
@@ -17,7 +17,7 @@ import pkg_resources
 
 __version__ = "unknown"
 try:                # pragma: no cover
-    __version__ = pkg_resources.get_distribution('pyvisa-sim').version
+    __version__ = pkg_resources.get_distribution('pyvisa-lua').version
 except:             # pragma: no cover
     pass    # we seem to have a local copy without any repository control or installed without setuptools
             # so the reported version will be __unknown__

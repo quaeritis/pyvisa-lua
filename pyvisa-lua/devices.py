@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-    pyvisa-sim.devices
+    pyvisa-lua.devices
     ~~~~~~~~~~~~~~~~~~
 
     Classes to simulate devices.
 
-    :copyright: 2014 by PyVISA-sim Authors, see AUTHORS for more details.
+    :copyright: 2014 by PyVISA-lua Authors, see AUTHORS for more details.
     :license: MIT, see LICENSE for more details.
 """
 

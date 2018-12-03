@@ -30,7 +30,7 @@ __doc__ = long_description
 
 requirements = ['stringparser', 'pyvisa>=1.8', 'pyyaml']
 
-setup(name='PyVISA-sim',
+setup(name='PyVISA-lua',
       description='Simulated backend for PyVISA implementing TCPIP, GPIB, RS232, and USB resources',
       version='0.4.dev0',
       long_description=long_description,
@@ -38,8 +38,8 @@ setup(name='PyVISA-sim',
       author_email='hernan.grecco@gmail.com',
       maintainer='Hernan E. Grecco',
       maintainer_email='hernan.grecco@gmail.com',
-      url='https://github.com/pyvisa/pyvisa-sim',
-      test_suite='pyvisa-sim.testsuite.testsuite',
+      url='https://github.com/pyvisa/pyvisa-lua',
+      test_suite='pyvisa-lua.testsuite.testsuite',
       keywords='VISA GPIB USB serial RS232 TCPIP measurement acquisition simulator mock',
       license='MIT License',
       install_requires=requirements,
@@ -61,10 +61,10 @@ setup(name='PyVISA-sim',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         ],
-      packages=['pyvisa-sim', 
-                'pyvisa-sim.testsuite'],
+      packages=['pyvisa-lua', 
+                'pyvisa-lua.testsuite'],
       package_data={
-          'pyvisa-sim': ['default.yaml']
+          'pyvisa-lua': ['default.yaml']
       },
       platforms="Linux, Windows,Mac",
       use_2to3=False,

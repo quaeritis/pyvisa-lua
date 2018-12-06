@@ -146,6 +146,14 @@ def update_component(name, comp, component_dict):
             msg = 'In device %s, malformed property %s\n%r'
             raise type(e)(msg % (name, prop_name, format_exc()))
 
+    try:
+        tsp = component_dict.get('tsp', {})
+        lua_file = tsp['file']
+        comp.add_tsp(lua_file)
+    except Exception as e:
+        msg = 'In device %s, malformed dialogue %s\n%r'
+        raise Exception(msg % (name, lua_file, e))
+
 
 def get_bases(definition_dict, loader):
     """Collect dependencies.

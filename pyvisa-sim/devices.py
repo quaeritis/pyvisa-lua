@@ -267,6 +267,7 @@ class Device(Component):
         :return: response if found or None
         :rtype: Tuple[bytes] | None
         """
+
         response = self._match_dialog(query)
         if response is not None:
             return response
@@ -284,6 +285,10 @@ class Device(Component):
             return response
 
         response = self._match_setters(query)
+        if response is not None:
+            return response
+
+        response = self._match_tsp(query)
         if response is not None:
             return response
 

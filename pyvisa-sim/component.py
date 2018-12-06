@@ -9,8 +9,54 @@
     :license: MIT, see LICENSE for more details.
 """
 import stringparser
+import lupa
+from lupa import LuaRuntime
+import io
+from contextlib import redirect_stdout
 
 from .common import logger
+
+from contextlib import contextmanager
+import ctypes
+import io
+import os, sys
+import tempfile
+
+libc = ctypes.CDLL(None)
+c_stdout = ctypes.c_void_p.in_dll(libc, 'stdout')
+
+@contextmanager
+def stdout_redirector(stream):
+    # The original fd stdout points to. Usually 1 on POSIX systems.
+    original_stdout_fd = sys.stdout.fileno()
+
+    def _redirect_stdout(to_fd):
+        """Redirect stdout to the given file descriptor."""
+        # Flush the C-level buffer stdout
+        libc.fflush(c_stdout)
+        # Flush and close sys.stdout - also closes the file descriptor (fd)
+        sys.stdout.close()
+        # Make original_stdout_fd point to the same file as to_fd
+        os.dup2(to_fd, original_stdout_fd)
+        # Create a new sys.stdout that points to the redirected fd
+        sys.stdout = io.TextIOWrapper(os.fdopen(original_stdout_fd, 'wb'))
+
+    # Save a copy of the original stdout fd in saved_stdout_fd
+    saved_stdout_fd = os.dup(original_stdout_fd)
+    try:
+        # Create a temporary file and redirect stdout to it
+        tfile = tempfile.TemporaryFile(mode='w+b')
+        _redirect_stdout(tfile.fileno())
+        # Yield to caller, then redirect stdout back to the saved fd
+        yield
+        _redirect_stdout(saved_stdout_fd)
+        # Copy contents of temporary file to the given stream
+        tfile.flush()
+        tfile.seek(0, io.SEEK_SET)
+        stream.write(tfile.read())
+    finally:
+        tfile.close()
+        os.close(saved_stdout_fd)
 
 
 def to_bytes(val):
@@ -20,6 +66,8 @@ def to_bytes(val):
         return val
     val = val.replace('\\r', '\r').replace('\\n', '\n')
     return val.encode()
+
+
 
 
 # Sentinel used for when there should not be a response to a query
@@ -92,6 +140,20 @@ class Property(object):
         return value
 
 
+class Tsp(object):
+    """
+    """
+
+    def __init__(self, lua_file):
+        """
+        :param lua_file: name of the lua_file
+        :return:
+        """
+
+        self.lua = LuaRuntime(unpack_returned_tuples=True)
+        self.lua_file = lua_file
+
+
 class Component(object):
     """A component of a device.
 
@@ -148,6 +210,13 @@ class Component(object):
                                   stringparser.Parser(query),
                                   to_bytes(response),
                                   to_bytes(error)))
+
+    def add_tsp(self, lua_file):
+        """Add tsp to device.
+
+        """
+        self._tsp = Tsp(lua_file)
+
 
     def match(self, query):
         """Try to find a match for a query in the instrument commands.
@@ -215,3 +284,21 @@ class Component(object):
                 return self.error_response('command_error')
 
         return None
+
+    def _match_tsp(self, query, tsp=None):
+        """Tries to match in dialogues
+
+        :param query: message tuple
+        :type query: Tuple[bytes]
+        :return: response if found or None
+        :rtype: Tuple[bytes] | None
+        """
+        if tsp is None:
+            tsp = self._tsp
+
+        f = io.BytesIO()
+        with stdout_redirector(f):
+            tsp.lua.execute(query)
+
+        response = f.getvalue().decode('utf-8')
+        return response.encode('utf-8')

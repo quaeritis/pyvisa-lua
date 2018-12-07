@@ -348,4 +348,8 @@ class Component(object):
             tsp.lua.execute(query)
 
         response = f.getvalue().decode('utf-8').rstrip()
-        return response.encode('utf-8')
+
+        if 'print' in query.decode('utf-8'):
+            return response.encode('utf-8')
+
+        return(NoResponse)

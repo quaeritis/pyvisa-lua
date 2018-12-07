@@ -147,12 +147,14 @@ def update_component(name, comp, component_dict):
             raise type(e)(msg % (name, prop_name, format_exc()))
 
     try:
-        tsp = component_dict.get('tsp', {})
-        lua_file = tsp['file']
-        comp.add_tsp(lua_file)
+        tsp_dict = component_dict.get('tsp', {})
+        filename = tsp_dict.get('filename', None)
+        bundled = tsp_dict.get('bundled', None)
+        if tsp_dict != {}:
+            comp.add_tsp(filename, bundled)
     except Exception as e:
-        msg = 'In device %s, malformed dialogue %s\n%r'
-        raise Exception(msg % (name, lua_file, e))
+        msg = 'In device %s, malformed tsp %s\n%r'
+        raise Exception(msg % (name, filename, e))
 
 
 def get_bases(definition_dict, loader):

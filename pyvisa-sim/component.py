@@ -9,10 +9,12 @@
     :license: MIT, see LICENSE for more details.
 """
 import stringparser
+import pkg_resources
 import lupa
 from lupa import LuaRuntime
 import io
 from contextlib import redirect_stdout
+from contextlib import closing
 
 from .common import logger
 
@@ -144,14 +146,59 @@ class Tsp(object):
     """
     """
 
-    def __init__(self, lua_file):
+    def __init__(self, filename, bundled):
         """
         :param lua_file: name of the lua_file
         :return:
         """
+        self._cache = {}
 
         self.lua = LuaRuntime(unpack_returned_tuples=True)
-        self.lua_file = lua_file
+        self.lua_return = self.load(filename, bundled)
+
+        self._filename = filename
+        self._bundled = bundled
+        self._basepath = os.path.dirname(filename)
+
+    def _lua_load(self, content_or_fp):
+        """ load lua file
+        """
+        try:
+            lua_return = self.lua.execute(content_or_fp)
+        except Exception as e:
+            raise type(e)('Malformed lua file:\n%r' % format_exc())
+
+        return lua_return
+
+    def parse_resource(self, name):
+        """Parse a resource file
+            """
+        with closing(pkg_resources.resource_stream(__name__, name)) as fp:
+            rbytes = fp.read()
+
+        return self._lua_load(StringIO(rbytes.decode('utf-8')))
+
+    def parse_file(self, fullpath):
+        """Parse a file
+        """
+        with open(fullpath, encoding='utf-8') as fp:
+            return self._lua_load(fp.read())
+
+    def load(self, filename, bundled):
+        if (filename, bundled) in self._cache:
+            msg = 'laod the same file again?'
+            raise ValueError(msg)
+            #return self._cache[(filename, bundled)]
+
+        if bundled:
+            lua_return = self.parse_resource(filename)
+        else:
+            lua_return = self.parse_file(filename)
+
+        self._cache[(filename, bundled)] = lua_return
+
+        return lua_return
+
 
 
 class Component(object):
@@ -211,11 +258,11 @@ class Component(object):
                                   to_bytes(response),
                                   to_bytes(error)))
 
-    def add_tsp(self, lua_file):
+    def add_tsp(self, filename, bundled):
         """Add tsp to device.
 
         """
-        self._tsp = Tsp(lua_file)
+        self._tsp = Tsp(filename, bundled)
 
 
     def match(self, query):
@@ -300,5 +347,5 @@ class Component(object):
         with stdout_redirector(f):
             tsp.lua.execute(query)
 
-        response = f.getvalue().decode('utf-8')
+        response = f.getvalue().decode('utf-8').rstrip()
         return response.encode('utf-8')

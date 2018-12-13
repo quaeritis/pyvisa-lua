@@ -11,6 +11,7 @@
 import os
 import io
 import sys
+from traceback import format_exc
 import stringparser
 import pkg_resources
 from lupa import LuaRuntime
@@ -20,6 +21,7 @@ import ctypes
 import tempfile
 
 from .common import logger
+
 
 def to_bytes(val):
     """Takes a text message and return a tuple
@@ -166,11 +168,9 @@ class Tsp(object):
 
     def parse_resource(self, name):
         """Parse a resource file
-            """
+        """
         with closing(pkg_resources.resource_stream(__name__, name)) as fp:
-            rbytes = fp.read()
-
-        return self._lua_load(StringIO(rbytes.decode('utf-8')))
+            return self._lua_load(fp.read())
 
     def parse_file(self, fullpath):
         """Parse a file

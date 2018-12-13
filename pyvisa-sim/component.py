@@ -8,58 +8,18 @@
     :copyright: 2014 by PyVISA-sim Authors, see AUTHORS for more details.
     :license: MIT, see LICENSE for more details.
 """
+import os
+import io
+import sys
 import stringparser
 import pkg_resources
-import lupa
 from lupa import LuaRuntime
-import io
-from contextlib import redirect_stdout
 from contextlib import closing
-
-from .common import logger
-
 from contextlib import contextmanager
 import ctypes
-import io
-import os, sys
 import tempfile
 
-libc = ctypes.CDLL(None)
-c_stdout = ctypes.c_void_p.in_dll(libc, 'stdout')
-
-@contextmanager
-def stdout_redirector(stream):
-    # The original fd stdout points to. Usually 1 on POSIX systems.
-    original_stdout_fd = sys.stdout.fileno()
-
-    def _redirect_stdout(to_fd):
-        """Redirect stdout to the given file descriptor."""
-        # Flush the C-level buffer stdout
-        libc.fflush(c_stdout)
-        # Flush and close sys.stdout - also closes the file descriptor (fd)
-        sys.stdout.close()
-        # Make original_stdout_fd point to the same file as to_fd
-        os.dup2(to_fd, original_stdout_fd)
-        # Create a new sys.stdout that points to the redirected fd
-        sys.stdout = io.TextIOWrapper(os.fdopen(original_stdout_fd, 'wb'))
-
-    # Save a copy of the original stdout fd in saved_stdout_fd
-    saved_stdout_fd = os.dup(original_stdout_fd)
-    try:
-        # Create a temporary file and redirect stdout to it
-        tfile = tempfile.TemporaryFile(mode='w+b')
-        _redirect_stdout(tfile.fileno())
-        # Yield to caller, then redirect stdout back to the saved fd
-        yield
-        _redirect_stdout(saved_stdout_fd)
-        # Copy contents of temporary file to the given stream
-        tfile.flush()
-        tfile.seek(0, io.SEEK_SET)
-        stream.write(tfile.read())
-    finally:
-        tfile.close()
-        os.close(saved_stdout_fd)
-
+from .common import logger
 
 def to_bytes(val):
     """Takes a text message and return a tuple
@@ -68,8 +28,6 @@ def to_bytes(val):
         return val
     val = val.replace('\\r', '\r').replace('\\n', '\n')
     return val.encode()
-
-
 
 
 # Sentinel used for when there should not be a response to a query
@@ -151,6 +109,9 @@ class Tsp(object):
         :param lua_file: name of the lua_file
         :return:
         """
+        self.libc = ctypes.CDLL(None)
+        self.c_stdout = ctypes.c_void_p.in_dll(self.libc, 'stdout')
+
         self._cache = {}
 
         self.lua = LuaRuntime(unpack_returned_tuples=True)
@@ -159,6 +120,39 @@ class Tsp(object):
         self._filename = filename
         self._bundled = bundled
         self._basepath = os.path.dirname(filename)
+
+    @contextmanager
+    def stdout_redirector(self, stream):
+        # The original fd stdout points to. Usually 1 on POSIX systems.
+        original_stdout_fd = sys.stdout.fileno()
+
+        def _redirect_stdout(to_fd):
+            """Redirect stdout to the given file descriptor."""
+            # Flush the C-level buffer stdout
+            self.libc.fflush(self.c_stdout)
+            # Flush and close sys.stdout - also closes the file descriptor (fd)
+            sys.stdout.close()
+            # Make original_stdout_fd point to the same file as to_fd
+            os.dup2(to_fd, original_stdout_fd)
+            # Create a new sys.stdout that points to the redirected fd
+            sys.stdout = io.TextIOWrapper(os.fdopen(original_stdout_fd, 'wb'))
+
+        # Save a copy of the original stdout fd in saved_stdout_fd
+        saved_stdout_fd = os.dup(original_stdout_fd)
+        try:
+            # Create a temporary file and redirect stdout to it
+            tfile = tempfile.TemporaryFile(mode='w+b')
+            _redirect_stdout(tfile.fileno())
+            # Yield to caller, then redirect stdout back to the saved fd
+            yield
+            _redirect_stdout(saved_stdout_fd)
+            # Copy contents of temporary file to the given stream
+            tfile.flush()
+            tfile.seek(0, io.SEEK_SET)
+            stream.write(tfile.read())
+        finally:
+            tfile.close()
+            os.close(saved_stdout_fd)
 
     def _lua_load(self, content_or_fp):
         """ load lua file
@@ -199,6 +193,12 @@ class Tsp(object):
 
         return lua_return
 
+    def execute(self, query):
+        f = io.BytesIO()
+        with self.stdout_redirector(f):
+            self.lua.execute(query)
+
+        return f
 
 
 class Component(object):
@@ -263,7 +263,6 @@ class Component(object):
 
         """
         self._tsp = Tsp(filename, bundled)
-
 
     def match(self, query):
         """Try to find a match for a query in the instrument commands.
@@ -343,9 +342,7 @@ class Component(object):
         if tsp is None:
             tsp = self._tsp
 
-        f = io.BytesIO()
-        with stdout_redirector(f):
-            tsp.lua.execute(query)
+        f = tsp.execute(query)
 
         response = f.getvalue().decode('utf-8').rstrip()
 

@@ -241,6 +241,18 @@ devices:
           min: 1
           max: 6
           type: float
+  device 5:
+    eom:
+      GPIB INSTR:
+        q: "\r\n"
+        r: "\n"
+    error: ERROR
+    dialogues:
+      - q: "*trg"
+    tsp:
+      filename: "default.lua"
+      bundled: true
+
 
 resources:
   ASRL1::INSTR:
@@ -279,3 +291,5 @@ resources:
     device: device 4
   USB::0x1111::0x2222::0x4445::RAW:
     device: device 1
+  GPIB::10::INSTR:
+    device: device 5

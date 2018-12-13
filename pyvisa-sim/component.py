@@ -8,7 +8,17 @@
     :copyright: 2014 by PyVISA-sim Authors, see AUTHORS for more details.
     :license: MIT, see LICENSE for more details.
 """
+import os
+import io
+import sys
+from traceback import format_exc
 import stringparser
+import pkg_resources
+from lupa import LuaRuntime
+from contextlib import closing
+from contextlib import contextmanager
+import ctypes
+import tempfile
 
 from .common import logger
 
@@ -92,6 +102,105 @@ class Property(object):
         return value
 
 
+class Tsp(object):
+    """
+    """
+
+    def __init__(self, filename, bundled):
+        """
+        :param lua_file: name of the lua_file
+        :return:
+        """
+        self.libc = ctypes.CDLL(None)
+        self.c_stdout = ctypes.c_void_p.in_dll(self.libc, 'stdout')
+
+        self._cache = {}
+
+        self.lua = LuaRuntime(unpack_returned_tuples=True)
+        self.lua_return = self.load(filename, bundled)
+
+        self._filename = filename
+        self._bundled = bundled
+        self._basepath = os.path.dirname(filename)
+
+    @contextmanager
+    def stdout_redirector(self, stream):
+        # The original fd stdout points to. Usually 1 on POSIX systems.
+        original_stdout_fd = sys.stdout.fileno()
+
+        def _redirect_stdout(to_fd):
+            """Redirect stdout to the given file descriptor."""
+            # Flush the C-level buffer stdout
+            self.libc.fflush(self.c_stdout)
+            # Flush and close sys.stdout - also closes the file descriptor (fd)
+            sys.stdout.close()
+            # Make original_stdout_fd point to the same file as to_fd
+            os.dup2(to_fd, original_stdout_fd)
+            # Create a new sys.stdout that points to the redirected fd
+            sys.stdout = io.TextIOWrapper(os.fdopen(original_stdout_fd, 'wb'))
+
+        # Save a copy of the original stdout fd in saved_stdout_fd
+        saved_stdout_fd = os.dup(original_stdout_fd)
+        try:
+            # Create a temporary file and redirect stdout to it
+            tfile = tempfile.TemporaryFile(mode='w+b')
+            _redirect_stdout(tfile.fileno())
+            # Yield to caller, then redirect stdout back to the saved fd
+            yield
+            _redirect_stdout(saved_stdout_fd)
+            # Copy contents of temporary file to the given stream
+            tfile.flush()
+            tfile.seek(0, io.SEEK_SET)
+            stream.write(tfile.read())
+        finally:
+            tfile.close()
+            os.close(saved_stdout_fd)
+
+    def _lua_load(self, content_or_fp):
+        """ load lua file
+        """
+        try:
+            lua_return = self.lua.execute(content_or_fp)
+        except Exception as e:
+            raise type(e)('Malformed lua file:\n%r' % format_exc())
+
+        return lua_return
+
+    def parse_resource(self, name):
+        """Parse a resource file
+        """
+        with closing(pkg_resources.resource_stream(__name__, name)) as fp:
+            return self._lua_load(fp.read())
+
+    def parse_file(self, fullpath):
+        """Parse a file
+        """
+        with open(fullpath, encoding='utf-8') as fp:
+            return self._lua_load(fp.read())
+
+    def load(self, filename, bundled):
+        if (filename, bundled) in self._cache:
+            msg = 'laod the same file again?'
+            raise ValueError(msg)
+            #return self._cache[(filename, bundled)]
+
+        if bundled:
+            lua_return = self.parse_resource(filename)
+        else:
+            lua_return = self.parse_file(filename)
+
+        self._cache[(filename, bundled)] = lua_return
+
+        return lua_return
+
+    def execute(self, query):
+        f = io.BytesIO()
+        with self.stdout_redirector(f):
+            self.lua.execute(query)
+
+        return f
+
+
 class Component(object):
     """A component of a device.
 
@@ -148,6 +257,12 @@ class Component(object):
                                   stringparser.Parser(query),
                                   to_bytes(response),
                                   to_bytes(error)))
+
+    def add_tsp(self, filename, bundled):
+        """Add tsp to device.
+
+        """
+        self._tsp = Tsp(filename, bundled)
 
     def match(self, query):
         """Try to find a match for a query in the instrument commands.
@@ -215,3 +330,23 @@ class Component(object):
                 return self.error_response('command_error')
 
         return None
+
+    def _match_tsp(self, query, tsp=None):
+        """Tries to match in dialogues
+
+        :param query: message tuple
+        :type query: Tuple[bytes]
+        :return: response if found or None
+        :rtype: Tuple[bytes] | None
+        """
+        if tsp is None:
+            tsp = self._tsp
+
+        f = tsp.execute(query)
+
+        response = f.getvalue().decode('utf-8').rstrip()
+
+        if 'print' in query.decode('utf-8'):
+            return response.encode('utf-8')
+
+        return(NoResponse)

@@ -92,29 +92,53 @@ function smua.trigger.measure.iv(buffer1, buffer2)
 end
 
 function smua.trigger.source.linearv(start, stop, steps)
-  i = 0
-  steps = (stop - start) / steps
-  for var=start,stop,steps do
-    smua.nvbuffer1.readings[i] = var
-    smua.nvbuffer2.readings[i] = var
+  if start == stop then
+    dummy.Vdrain = start
+  else
+    i = 0
+    steps = (stop - start) / steps
+    for var=start,stop,steps do
+      smua.nvbuffer1.readings[i] = var
+      smua.nvbuffer2.readings[i] = var
 
-    smub.nvbuffer1.readings[i] = var
-    smub.nvbuffer2.readings[i] = var
+      smub.nvbuffer1.readings[i] = var
+      smub.nvbuffer2.readings[i] = var
 
-    i = i+1
+      i = i+1
+    end
+
+    smua.nvbuffer1.n = #smua.nvbuffer1.readings
+    smua.nvbuffer2.n = #smua.nvbuffer2.readings
+
+    smub.nvbuffer1.n = #smub.nvbuffer1.readings
+    smub.nvbuffer2.n = #smub.nvbuffer2.readings
   end
-
-  smua.nvbuffer1.n = #smua.nvbuffer1.readings
-  smua.nvbuffer2.n = #smua.nvbuffer2.readings
-
-  smub.nvbuffer1.n = #smub.nvbuffer1.readings
-  smub.nvbuffer2.n = #smub.nvbuffer2.readings
 
   return 1
 end
 
 function smub.trigger.source.linearv(start, stop, steps)
-  dummy.Vdrain = start
+  if start == stop then
+    dummy.Vdrain = start
+  else
+    i = 0
+    steps = (stop - start) / steps
+    for var=start,stop,steps do
+      smua.nvbuffer1.readings[i] = var
+      smua.nvbuffer2.readings[i] = var
+
+      smub.nvbuffer1.readings[i] = var
+      smub.nvbuffer2.readings[i] = var
+
+      i = i+1
+    end
+
+    smua.nvbuffer1.n = #smua.nvbuffer1.readings
+    smua.nvbuffer2.n = #smua.nvbuffer2.readings
+
+    smub.nvbuffer1.n = #smub.nvbuffer1.readings
+    smub.nvbuffer2.n = #smub.nvbuffer2.readings
+  end
 
   return 1
 end

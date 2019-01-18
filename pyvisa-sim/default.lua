@@ -1,3 +1,4 @@
+
 localnode = {
   model = 'Keithley',
   linefreq = 100
@@ -140,6 +141,32 @@ function smub.trigger.source.linearv(start, stop, steps)
     smub.nvbuffer2.n = #smub.nvbuffer2.readings
   end
 
+  return 1
+end
+
+
+function smub.trigger.source.listv(mylist)
+  smua.trigger.source.listv(mylist)
+end
+
+function smua.trigger.source.listv(mylist)
+  if mylist[1]== mylist[2] then
+    dummy.Vdrain = mylist[1]
+  else
+    for index, value in ipairs(mylist) do
+      smua.nvbuffer1.readings[index] = value
+      smua.nvbuffer2.readings[index] = value
+
+      smub.nvbuffer1.readings[index] = value
+      smub.nvbuffer2.readings[index] = value
+    end
+
+    smua.nvbuffer1.n = #smua.nvbuffer1.readings
+    smua.nvbuffer2.n = #smua.nvbuffer2.readings
+
+    smub.nvbuffer1.n = #smub.nvbuffer1.readings
+    smub.nvbuffer2.n = #smub.nvbuffer2.readings
+  end
   return 1
 end
 
